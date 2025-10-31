@@ -1,0 +1,211 @@
+<mat-toolbar color="primary" class="header-toolbar">
+  <span class="toolbar-title">Transaction Report</span>
+  <span class="spacer"></span>
+  <span class="user-info" *ngIf="userInfo">{{ userInfo.email }}</span>
+  <button mat-icon-button [matMenuTriggerFor]="menu">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #menu="matMenu">
+    <button mat-menu-item (click)="exportToCSV()">
+      <mat-icon>download</mat-icon>
+      <span>Export to CSV</span>
+    </button>
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Logout</span>
+    </button>
+  </mat-menu>
+</mat-toolbar>
+
+<div class="report-container">
+  <!-- Filters Card -->
+  <mat-card class="filters-card">
+    <mat-card-header>
+      <mat-card-title>Filters</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filterForm" class="filter-form">
+        <div class="filter-row">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Agent ID</mat-label>
+            <input matInput formControlName="agentId" placeholder="Enter Agent ID" />
+            <mat-icon matPrefix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Location ID</mat-label>
+            <input matInput formControlName="locationId" placeholder="Enter Location ID" />
+            <mat-icon matPrefix>location_on</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>From Date</mat-label>
+            <input
+              matInput
+              [matDatepicker]="fromPicker"
+              formControlName="fromDate"
+              placeholder="Select from date"
+            />
+            <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+            <mat-datepicker #fromPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>To Date</mat-label>
+            <input
+              matInput
+              [matDatepicker]="toPicker"
+              formControlName="toDate"
+              placeholder="Select to date"
+            />
+            <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+            <mat-datepicker #toPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+
+        <div class="filter-row">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Transaction Type</mat-label>
+            <mat-select formControlName="transactionType">
+              <mat-option value="">All</mat-option>
+              <mat-option *ngFor="let type of transactionTypes" [value]="type">
+                {{ type }}
+              </mat-option>
+            </mat-select>
+            <mat-icon matPrefix>swap_horiz</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="">All</mat-option>
+              <mat-option *ngFor="let status of statuses" [value]="status">
+                {{ status }}
+              </mat-option>
+            </mat-select>
+            <mat-icon matPrefix>info</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Profile Risk</mat-label>
+            <mat-select formControlName="profRisk">
+              <mat-option value="">All</mat-option>
+              <mat-option *ngFor="let risk of riskLevels" [value]="risk">
+                {{ risk }}
+              </mat-option>
+            </mat-select>
+            <mat-icon matPrefix>warning</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Country Risk</mat-label>
+            <mat-select formControlName="countryRisk">
+              <mat-option value="">All</mat-option>
+              <mat-option *ngFor="let risk of riskLevels" [value]="risk">
+                {{ risk }}
+              </mat-option>
+            </mat-select>
+            <mat-icon matPrefix>flag</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="filter-actions">
+          <button mat-raised-button color="primary" (click)="onSearch()" [disabled]="loading">
+            <mat-icon>search</mat-icon>
+            Search
+          </button>
+          <button mat-raised-button (click)="onReset()" [disabled]="loading">
+            <mat-icon>refresh</mat-icon>
+            Reset
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Results Card -->
+  <mat-card class="results-card">
+    <!-- <mat-card-header> -->
+      <mat-card-title>
+        Transactions
+        <span class="record-count" *ngIf="totalRecords > 0 && transactions">
+          ({{ transactions.length }} of {{ totalRecords }})
+        </span>
+      </mat-card-title>
+    <!-- </mat-card-header> -->
+    <mat-card-content>
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading transactions...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!loading && transactions && transactions.length === 0" class="empty-state">
+        <mat-icon>inbox</mat-icon>
+        <h3>No Transactions Found</h3>
+        <p>Try adjusting your filters to see results</p>
+      </div>
+
+      <!-- Table -->
+      <div *ngIf="!loading && transactions && transactions.length > 0" class="table-container">
+        <!-- <div class="table-wrapper"> -->
+          <table class="transactions-table">
+            <thead>
+              <tr>
+                <th *ngFor="let header of tableHeaders">{{ header }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let transaction of transactions; let i = index" class="transaction-row">
+                <td class="row-number">{{ i + 1 }}</td>
+                <td class="transaction-id">
+                  <span class="id-text">{{ transaction.refNum || transaction.id || 'N/A' }}</span>
+                </td>
+                <td>
+                  <span class="type-badge">{{ transaction.service || 'N/A' }}</span>
+                </td>
+                <td>
+                  <span class="status-badge" [ngClass]="getStatusClass(transaction.status)">
+                    {{ transaction.status || 'N/A' }}
+                  </span>
+                </td>
+                <td class="amount-cell">
+                  <strong>{{ formatCurrency(transaction.amount || '0') }}</strong>
+                </td>
+                <td>{{ transaction.senderName || 'N/A' }}</td>
+                <td>{{ transaction.receiverName || 'N/A' }}</td>
+                <td>{{ transaction.location || 'N/A' }}</td>
+                <td>
+                  <span class="risk-badge" [ngClass]="getRiskClass(transaction.profRisk)">
+                    <mat-icon class="risk-icon">{{ getRiskIcon(transaction.profRisk) }}</mat-icon>
+                    {{ transaction.profRisk || 'N/A' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="risk-badge" [ngClass]="getRiskClass(transaction.countryRisk)">
+                    <mat-icon class="risk-icon">{{ getRiskIcon(transaction.countryRisk) }}</mat-icon>
+                    {{ transaction.countryRisk || 'N/A' }}
+                  </span>
+                </td>
+                <td class="date-cell">{{ formatDate(transaction.createdOn) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        <!-- </div> -->
+
+        <!-- Load More Indicator -->
+        <div *ngIf="loadingMore" class="loading-more">
+          <mat-spinner diameter="30"></mat-spinner>
+          <p>Loading more transactions...</p>
+        </div>
+
+        <!-- End of Results -->
+        <div *ngIf="!hasMore && transactions && transactions.length > 0" class="end-message">
+          <mat-icon>check_circle</mat-icon>
+          <p>All transactions loaded</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
