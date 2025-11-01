@@ -1,7 +1,7 @@
 <mat-toolbar color="primary" class="header-toolbar">
   <span class="toolbar-title">Transaction Report</span>
   <span class="spacer"></span>
-  <span class="user-info" *ngIf="userInfo">{{ userInfo.email }}</span>
+  <span class="user-info" *ngIf="userInfo?.email">{{ userInfo.email }}</span>
   <button mat-icon-button [matMenuTriggerFor]="menu">
     <mat-icon>more_vert</mat-icon>
   </button>
@@ -128,27 +128,28 @@
     <!-- <mat-card-header> -->
       <mat-card-title>
         Transactions
-        <span class="record-count" *ngIf="totalRecords > 0 && transactions">
+        <span class="record-count" *ngIf="totalRecords > 0">
           ({{ transactions.length }} of {{ totalRecords }})
         </span>
       </mat-card-title>
     <!-- </mat-card-header> -->
     <mat-card-content>
-      <!-- Loading State -->
-      <div *ngIf="loading" class="loading-container">
-        <mat-spinner diameter="50"></mat-spinner>
-        <p>Loading transactions...</p>
-      </div>
+      <div class="table-scroll-wrapper" #scrollWrapper>
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p>Loading transactions...</p>
+        </div>
 
-      <!-- Empty State -->
-      <div *ngIf="!loading && transactions && transactions.length === 0" class="empty-state">
-        <mat-icon>inbox</mat-icon>
-        <h3>No Transactions Found</h3>
-        <p>Try adjusting your filters to see results</p>
-      </div>
+        <!-- Empty State -->
+        <div *ngIf="!loading && transactions.length === 0" class="empty-state">
+          <mat-icon>inbox</mat-icon>
+          <h3>No Transactions Found</h3>
+          <p>Try adjusting your filters to see results</p>
+        </div>
 
-      <!-- Table -->
-      <div *ngIf="!loading && transactions && transactions.length > 0" class="table-container">
+        <!-- Table -->
+        <div *ngIf="!loading && transactions.length > 0" class="table-container">
         <!-- <div class="table-wrapper"> -->
           <table class="transactions-table">
             <thead>
@@ -158,37 +159,59 @@
             </thead>
             <tbody>
               <tr *ngFor="let transaction of transactions; let i = index" class="transaction-row">
-                <td class="row-number">{{ i + 1 }}</td>
-                <td class="transaction-id">
-                  <span class="id-text">{{ transaction.refNum || transaction.id || 'N/A' }}</span>
+                <td class="row-number" [title]="'Row ' + (i + 1)">{{ i + 1 }}</td>
+                <td class="transaction-id" [title]="transaction.refNum || 'N/A'">
+                  <span class="id-text">{{ transaction.refNum || 'N/A' }}</span>
                 </td>
-                <td>
+                <td [title]="transaction.service || 'N/A'">
                   <span class="type-badge">{{ transaction.service || 'N/A' }}</span>
                 </td>
-                <td>
+                <td [title]="transaction.serviceName || 'N/A'">{{ transaction.serviceName || 'N/A' }}</td>
+                <td [title]="transaction.status || 'N/A'">
                   <span class="status-badge" [ngClass]="getStatusClass(transaction.status)">
                     {{ transaction.status || 'N/A' }}
                   </span>
                 </td>
-                <td class="amount-cell">
+                <td class="amount-cell" [title]="'Amount: ' + formatCurrency(transaction.amount || '0')">
                   <strong>{{ formatCurrency(transaction.amount || '0') }}</strong>
                 </td>
-                <td>{{ transaction.senderName || 'N/A' }}</td>
-                <td>{{ transaction.receiverName || 'N/A' }}</td>
-                <td>{{ transaction.location || 'N/A' }}</td>
-                <td>
+                <td class="amount-cell" [title]="'Fee: ' + (transaction.fee || 'N/A')">{{ transaction.fee || 'N/A' }}</td>
+                <td class="amount-cell" [title]="'Total Payable: ' + (transaction.totalPayableAmount || 'N/A')">
+                  <strong>{{ transaction.totalPayableAmount || 'N/A' }}</strong>
+                </td>
+                <td [title]="'Sender: ' + (transaction.senderName || 'N/A')">{{ transaction.senderName || 'N/A' }}</td>
+                <td [title]="'Receiver: ' + (transaction.receiverName || 'N/A')">{{ transaction.receiverName || 'N/A' }}</td>
+                <td [title]="'First Name: ' + (transaction.firstName || 'N/A')">{{ transaction.firstName || 'N/A' }}</td>
+                <td [title]="'Last Name: ' + (transaction.lastName || 'N/A')">{{ transaction.lastName || 'N/A' }}</td>
+                <td [title]="'Customer Number: ' + (transaction.customerNumber || 'N/A')">{{ transaction.customerNumber || 'N/A' }}</td>
+                <td class="date-cell" [title]="'DOB: ' + formatDate(transaction.dob)">{{ formatDate(transaction.dob) }}</td>
+                <td [title]="'ID Number: ' + (transaction.idNumber || 'N/A')">{{ transaction.idNumber || 'N/A' }}</td>
+                <td [title]="'Agent: ' + (transaction.agentName || 'N/A')">{{ transaction.agentName || 'N/A' }}</td>
+                <td [title]="'Location: ' + (transaction.location || 'N/A')">{{ transaction.location || 'N/A' }}</td>
+                <td [title]="'Country: ' + (transaction.country || 'N/A')">{{ transaction.country || 'N/A' }}</td>
+                <td [title]="'Principle: ' + (transaction.principle || 'N/A')">{{ transaction.principle || 'N/A' }}</td>
+                <td [title]="'MG Ref Number: ' + (transaction.mgRefNum || 'N/A')">{{ transaction.mgRefNum || 'N/A' }}</td>
+                <td [title]="'Profile Risk: ' + (transaction.profRisk || 'N/A')">
                   <span class="risk-badge" [ngClass]="getRiskClass(transaction.profRisk)">
                     <mat-icon class="risk-icon">{{ getRiskIcon(transaction.profRisk) }}</mat-icon>
                     {{ transaction.profRisk || 'N/A' }}
                   </span>
                 </td>
-                <td>
+                <td [title]="'Country Risk: ' + (transaction.countryRisk || 'N/A')">
                   <span class="risk-badge" [ngClass]="getRiskClass(transaction.countryRisk)">
                     <mat-icon class="risk-icon">{{ getRiskIcon(transaction.countryRisk) }}</mat-icon>
                     {{ transaction.countryRisk || 'N/A' }}
                   </span>
                 </td>
-                <td class="date-cell">{{ formatDate(transaction.createdOn) }}</td>
+                <td [title]="'Alert: ' + (transaction.isAlert ? 'Yes' : 'No')">
+                  <span class="alert-badge" [ngClass]="transaction.isAlert ? 'has-alert' : 'no-alert'">
+                    <mat-icon class="alert-icon">{{ transaction.isAlert ? 'warning' : 'check_circle' }}</mat-icon>
+                    {{ transaction.isAlert ? 'Yes' : 'No' }}
+                  </span>
+                </td>
+                <td class="note-cell" [title]="transaction.suspiciousNote || 'No suspicious note'">{{ transaction.suspiciousNote || '-' }}</td>
+                <td [title]="'Created By: ' + (transaction.createdBy || 'N/A')">{{ transaction.createdBy || 'N/A' }}</td>
+                <td class="date-cell" [title]="'Created On: ' + formatDate(transaction.createdOn)">{{ formatDate(transaction.createdOn) }}</td>
               </tr>
             </tbody>
           </table>
@@ -201,9 +224,10 @@
         </div>
 
         <!-- End of Results -->
-        <div *ngIf="!hasMore && transactions && transactions.length > 0" class="end-message">
+        <div *ngIf="!hasMore && transactions.length > 0" class="end-message">
           <mat-icon>check_circle</mat-icon>
-          <p>All transactions loaded</p>
+          <p>All transactions loaded ({{ transactions.length }} total)</p>
+        </div>
         </div>
       </div>
     </mat-card-content>

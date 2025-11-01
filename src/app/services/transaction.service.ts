@@ -12,9 +12,14 @@ export class TransactionService {
   constructor(private http: HttpClient) {}
 
   getTransactionReport(request: TransactionReportRequest): Observable<TransactionReportResponse> {
+    // Wrap the request in transactionReportDto as expected by the API
+    const body = {
+      transactionReportDto: request
+    };
+    
     return this.http.post<TransactionReportResponse>(
       `${this.API_URL}/TransactionReport`,
-      request
+      body
     );
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -40,20 +40,36 @@ import { Transaction, TransactionReportRequest } from '../../models/transaction.
   templateUrl: './transaction-report.component.html',
   styleUrls: ['./transaction-report.component.css']
 })
-export class TransactionReportComponent implements OnInit {
+export class TransactionReportComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('scrollWrapper') scrollWrapper?: ElementRef;
   filterForm!: FormGroup;
   transactions: Transaction[] = [];
   tableHeaders: string[] = [
     '#',
     'Reference Number',
     'Service',
+    'Service Name',
     'Status',
     'Amount',
+    'Fee',
+    'Total Payable',
     'Sender',
     'Receiver',
+    'First Name',
+    'Last Name',
+    'Customer Number',
+    'DOB',
+    'ID Number',
+    'Agent Name',
     'Location',
+    'Country',
+    'Principle',
+    'MG Ref Num',
     'Profile Risk',
     'Country Risk',
+    'Is Alert',
+    'Suspicious Note',
+    'Created By',
     'Created On'
   ];
   
@@ -78,16 +94,35 @@ export class TransactionReportComponent implements OnInit {
     private fb: FormBuilder,
     private transactionService: TransactionService,
     private authService: AuthService,
-    private commonService: CommonService
+    private commonService: CommonService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
+    // Load user info immediately
+    this.userInfo = this.authService.getUserInfo();
+    console.log('User info loaded:', this.userInfo);
+    
     this.initializeForm();
-    // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
-    setTimeout(() => {
-      this.userInfo = this.authService.getUserInfo();
+    
+    // Load transactions immediately - use Promise.resolve to avoid ExpressionChangedAfterItHasBeenCheckedError
+    Promise.resolve().then(() => {
       this.loadTransactions();
     });
+  }
+
+  ngAfterViewInit(): void {
+    // Add scroll listener to the scroll wrapper
+    if (this.scrollWrapper) {
+      this.scrollWrapper.nativeElement.addEventListener('scroll', () => this.onScrollWrapper());
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Clean up scroll listener
+    if (this.scrollWrapper) {
+      this.scrollWrapper.nativeElement.removeEventListener('scroll', () => this.onScrollWrapper());
+    }
   }
 
   initializeForm(): void {
@@ -106,20 +141,17 @@ export class TransactionReportComponent implements OnInit {
       countryRisk: ['']
     });
 
-    // Debounced filter change
-    const debouncedSearch = this.commonService.debounce(() => {
-      this.resetAndSearch();
-    }, 500);
-
-    this.filterForm.valueChanges.subscribe(() => {
-      debouncedSearch();
-    });
+    // Note: API call is only triggered when Search button is clicked
+    // No auto-search on field value changes
   }
 
   loadTransactions(append: boolean = false): void {
     if (this.loading || this.loadingMore) {
+      console.log('Already loading, skipping...');
       return;
     }
+
+    console.log('Loading transactions...', 'Append:', append, 'Page:', this.currentPage);
 
     if (append) {
       this.loadingMore = true;
@@ -129,9 +161,11 @@ export class TransactionReportComponent implements OnInit {
     }
 
     const request = this.buildRequest();
+    console.log('Request:', request);
 
     this.transactionService.getTransactionReport(request).subscribe({
       next: (response) => {
+        console.log('Response received:', response);
         const newItems = response.items || [];
         
         if (append) {
@@ -143,18 +177,32 @@ export class TransactionReportComponent implements OnInit {
         this.totalRecords = response.totalCount || 0;
         this.hasMore = this.transactions.length < this.totalRecords;
         
+        // Clear loading states immediately after data is set
+        this.loading = false;
+        this.loadingMore = false;
+        
+        console.log('Transactions loaded:', this.transactions.length, 'Total:', this.totalRecords, 'Has more:', this.hasMore);
+        console.log('Loading state cleared - loading:', this.loading, 'loadingMore:', this.loadingMore);
+        
+        // Force change detection to update the view
+        this.cdr.detectChanges();
+        console.log('Change detection triggered');
+        
         if (newItems.length === 0 && !append) {
           this.commonService.showInfo('No transactions found for the selected filters');
         }
       },
       error: (error) => {
+        console.error('Error loading transactions:', error);
         const errorMessage = this.commonService.handleError(error);
         this.commonService.showError(errorMessage);
         this.hasMore = false;
-      },
-      complete: () => {
         this.loading = false;
         this.loadingMore = false;
+        this.cdr.detectChanges();
+      },
+      complete: () => {
+        console.log('Loading complete');
       }
     });
   }
@@ -205,22 +253,33 @@ export class TransactionReportComponent implements OnInit {
   }
 
   onReset(): void {
+    // Clear all form fields
     this.filterForm.reset({
-      agentId: this.sampleAgentId,
-      locationId: this.sampleLocationId,
-      fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      toDate: new Date()
+      agentId: '',
+      locationId: '',
+      fromDate: '',
+      toDate: '',
+      transactionType: '',
+      status: '',
+      profRisk: '',
+      countryRisk: ''
     });
+    
+    // Reset to first page and reload with default parameters (pageNumber: 1, pageSize: 20)
     this.resetAndSearch();
   }
 
-  @HostListener('window:scroll')
-  onScroll(): void {
-    const scrollPosition = window.pageYOffset + window.innerHeight;
-    const pageHeight = document.documentElement.scrollHeight;
+  onScrollWrapper(): void {
+    if (!this.scrollWrapper) return;
     
-    // Load more when user scrolls to 80% of the page
-    if (scrollPosition >= pageHeight * 0.8 && this.hasMore && !this.loading && !this.loadingMore) {
+    const element = this.scrollWrapper.nativeElement;
+    const scrollPosition = element.scrollTop + element.clientHeight;
+    const scrollHeight = element.scrollHeight;
+    
+    // Load more when user scrolls near the bottom (within 100px)
+    const threshold = 100;
+    if (scrollPosition >= scrollHeight - threshold && this.hasMore && !this.loading && !this.loadingMore) {
+      console.log('Loading more transactions...', 'Current page:', this.currentPage);
       this.currentPage++;
       this.loadTransactions(true);
     }
@@ -235,15 +294,29 @@ export class TransactionReportComponent implements OnInit {
     const exportData = this.transactions.map(t => ({
       'Reference Number': t.refNum,
       'Service': t.service,
+      'Service Name': t.serviceName || 'N/A',
       'Status': t.status,
       'Amount': t.amount,
-      'Profile Risk': t.profRisk,
-      'Country Risk': t.countryRisk,
-      'Created On': t.createdOn,
+      'Fee': t.fee,
+      'Total Payable': t.totalPayableAmount,
       'Sender': t.senderName || 'N/A',
       'Receiver': t.receiverName || 'N/A',
+      'First Name': t.firstName || 'N/A',
+      'Last Name': t.lastName || 'N/A',
+      'Customer Number': t.customerNumber || 'N/A',
+      'DOB': t.dob,
+      'ID Number': t.idNumber || 'N/A',
+      'Agent Name': t.agentName || 'N/A',
       'Location': t.location,
-      'Country': t.country
+      'Country': t.country,
+      'Principle': t.principle,
+      'MG Ref Num': t.mgRefNum || 'N/A',
+      'Profile Risk': t.profRisk,
+      'Country Risk': t.countryRisk,
+      'Is Alert': t.isAlert ? 'Yes' : 'No',
+      'Suspicious Note': t.suspiciousNote || '-',
+      'Created By': t.createdBy || 'N/A',
+      'Created On': t.createdOn
     }));
 
     this.transactionService.exportToCSV(exportData, `transactions_${Date.now()}.csv`);
