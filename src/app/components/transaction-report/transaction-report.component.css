@@ -178,6 +178,8 @@ mat-card-title {
 ::ng-deep .filters-card .mat-mdc-text-field-wrapper {
   padding-top: 2px;
   padding-bottom: 2px;
+  padding-right: 3px;
+  padding-left: 3px !important;
   height: 36px;
 }
 
@@ -632,6 +634,36 @@ mat-card-title {
   margin: 8px 0 0 0;
   font-size: 15px;
   font-weight: 500;
+}
+
+/* Loading and End Rows in Table */
+.loading-row,
+.end-row {
+  border-bottom: none !important;
+}
+
+.loading-row:hover,
+.end-row:hover {
+  background: transparent !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.loading-cell,
+.end-cell {
+  padding: 0 !important;
+  border: none !important;
+}
+
+.loading-cell .loading-more {
+  margin: 0;
+  border-radius: 0;
+  background: #f8f9fa;
+}
+
+.end-cell .end-message {
+  margin: 0;
+  border-radius: 0;
 }
 
 /* Responsive Design */

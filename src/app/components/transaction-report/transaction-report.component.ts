@@ -61,7 +61,9 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
     'DOB',
     'ID Number',
     'Agent Name',
+    'Agent ID',
     'Location',
+    'Location ID',
     'Country',
     'Principle',
     'MG Ref Num',
@@ -101,7 +103,6 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
   ngOnInit(): void {
     // Load user info immediately
     this.userInfo = this.authService.getUserInfo();
-    console.log('User info loaded:', this.userInfo);
     
     this.initializeForm();
     
@@ -147,25 +148,21 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
 
   loadTransactions(append: boolean = false): void {
     if (this.loading || this.loadingMore) {
-      console.log('Already loading, skipping...');
       return;
     }
 
-    console.log('Loading transactions...', 'Append:', append, 'Page:', this.currentPage);
-
     if (append) {
       this.loadingMore = true;
+      this.cdr.detectChanges(); // Force immediate UI update
     } else {
       this.loading = true;
       this.transactions = [];
     }
 
     const request = this.buildRequest();
-    console.log('Request:', request);
 
     this.transactionService.getTransactionReport(request).subscribe({
       next: (response) => {
-        console.log('Response received:', response);
         const newItems = response.items || [];
         
         if (append) {
@@ -177,16 +174,12 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
         this.totalRecords = response.totalCount || 0;
         this.hasMore = this.transactions.length < this.totalRecords;
         
-        // Clear loading states immediately after data is set
-        this.loading = false;
-        this.loadingMore = false;
-        
-        console.log('Transactions loaded:', this.transactions.length, 'Total:', this.totalRecords, 'Has more:', this.hasMore);
-        console.log('Loading state cleared - loading:', this.loading, 'loadingMore:', this.loadingMore);
-        
-        // Force change detection to update the view
-        this.cdr.detectChanges();
-        console.log('Change detection triggered');
+        // Add a small delay to ensure loader is visible
+        setTimeout(() => {
+          this.loading = false;
+          this.loadingMore = false;
+          this.cdr.detectChanges();
+        }, 500); // 500ms minimum display time
         
         if (newItems.length === 0 && !append) {
           this.commonService.showInfo('No transactions found for the selected filters');
@@ -200,9 +193,6 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
         this.loading = false;
         this.loadingMore = false;
         this.cdr.detectChanges();
-      },
-      complete: () => {
-        console.log('Loading complete');
       }
     });
   }
@@ -279,7 +269,6 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
     // Load more when user scrolls near the bottom (within 100px)
     const threshold = 100;
     if (scrollPosition >= scrollHeight - threshold && this.hasMore && !this.loading && !this.loadingMore) {
-      console.log('Loading more transactions...', 'Current page:', this.currentPage);
       this.currentPage++;
       this.loadTransactions(true);
     }
@@ -307,7 +296,9 @@ export class TransactionReportComponent implements OnInit, AfterViewInit, OnDest
       'DOB': t.dob,
       'ID Number': t.idNumber || 'N/A',
       'Agent Name': t.agentName || 'N/A',
+      'Agent ID': t.agentId || 'N/A',
       'Location': t.location,
+      'Location ID': t.locationId || 'N/A',
       'Country': t.country,
       'Principle': t.principle,
       'MG Ref Num': t.mgRefNum || 'N/A',

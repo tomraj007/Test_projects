@@ -187,7 +187,9 @@
                 <td class="date-cell" [title]="'DOB: ' + formatDate(transaction.dob)">{{ formatDate(transaction.dob) }}</td>
                 <td [title]="'ID Number: ' + (transaction.idNumber || 'N/A')">{{ transaction.idNumber || 'N/A' }}</td>
                 <td [title]="'Agent: ' + (transaction.agentName || 'N/A')">{{ transaction.agentName || 'N/A' }}</td>
+                <td [title]="'Agent ID: ' + (transaction.agentId || 'N/A')">{{ transaction.agentId || 'N/A' }}</td>
                 <td [title]="'Location: ' + (transaction.location || 'N/A')">{{ transaction.location || 'N/A' }}</td>
+                <td [title]="'Location ID: ' + (transaction.locationId || 'N/A')">{{ transaction.locationId || 'N/A' }}</td>
                 <td [title]="'Country: ' + (transaction.country || 'N/A')">{{ transaction.country || 'N/A' }}</td>
                 <td [title]="'Principle: ' + (transaction.principle || 'N/A')">{{ transaction.principle || 'N/A' }}</td>
                 <td [title]="'MG Ref Number: ' + (transaction.mgRefNum || 'N/A')">{{ transaction.mgRefNum || 'N/A' }}</td>
@@ -216,6 +218,7 @@
             </tbody>
           </table>
         <!-- </div> -->
+        </div>
 
         <!-- Load More Indicator -->
         <div *ngIf="loadingMore" class="loading-more">
@@ -224,10 +227,9 @@
         </div>
 
         <!-- End of Results -->
-        <div *ngIf="!hasMore && transactions.length > 0" class="end-message">
+        <div *ngIf="!hasMore && !loadingMore && transactions.length > 0" class="end-message">
           <mat-icon>check_circle</mat-icon>
           <p>All transactions loaded ({{ transactions.length }} total)</p>
-        </div>
         </div>
       </div>
     </mat-card-content>
