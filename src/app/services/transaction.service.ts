@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TransactionReportRequest, TransactionReportResponse } from '../models/transaction.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TransactionService {
-  private readonly API_URL = '/api/gateway/report';
+  private readonly API_URL = environment.apiEndpoints.report;
 
   constructor(private http: HttpClient) {}
 
